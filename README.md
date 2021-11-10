@@ -1,4 +1,4 @@
-# Elevator-Algo
+# Elevator-Algo (Java)
 This repository is a smart elevator online algoritm.
 I programmed this with a partner as an assignment in Ariel university as part of my OOP course.
 This was the first assignment.
