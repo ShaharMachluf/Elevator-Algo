@@ -10,25 +10,47 @@ public class MyElev implements ElevatorAlgo {
     public static final int UP = 1, LEVEL = 0, DOWN = -1, ERROR = -2;
     public static final int INIT=0, GOING2SRC=1, GOIND2DEST=2, DONE=3; //CMD
     private Building _building;
+    private int _direction;
     private int elevCol;
     public ArrayList<CallForElevator>[] list;
 
     public MyElev(Building b) {
         _building = b;
+        _direction = UP;
         elevCol = _building.numberOfElevetors();
         list = new ArrayList[elevCol];
-        setList(list);//reset the list
+        setList(list);  
+       spreed(list);
     }
 
+   
     /**
-     * init the call list of each elevator in the array
-     * @param list array of array lists for elevator calls
+     * this method set the relist 
+     * @param list
      */
-    public void setList(ArrayList<CallForElevator>[] list) {
+    
+    private void setList(ArrayList<CallForElevator>[] list) {
         for (int i = 0; i < elevCol; i++) {
             this.list[i] = new ArrayList<CallForElevator>();
 
         }
+    }
+    
+     /**
+     * this method spreed the elevators in the building in order to get better time in calling
+     * @param list
+     */
+    
+    private void spreed(ArrayList<CallForElevator>[] list){
+     int sum_of_floors= _building.maxFloor()- _building.minFloor();
+     int sum_of_elev= getBuilding().numberOfElevetors();
+     int t=sum_of_floors/sum_of_elev;
+     int j=0;
+     for (int i=0;j< getBuilding().numberOfElevetors()&&i<sum_of_floors;i=i+t){
+          _building.getElevetor(j).goTo(i);
+         j++;
+     }
+
     }
 
 
@@ -203,71 +225,77 @@ public class MyElev implements ElevatorAlgo {
         return count;
     }
 
+        /**
+     * This method is the low level command for each elevator in terms of the elevator API: GoTo, Stop.
+     * every time stamp its check if there is a call that not going to src/dest
+     * @param elev the current Elevator index on which the operation is performs.
+     */
 
     @Override
-    public void cmdElevator ( int elev) {
+        public void cmdElevator ( int elev) {
 
-        if (list[elev].isEmpty()) { //if there is no calls to this elevator
-            return;
-        }
+            if (list[elev].isEmpty()) { //if there is no calls to this elevator
+                return;
+            }
         removeDone(list[elev]);
         Elevator curr = this.getBuilding().getElevetor(elev);
 
+            if (!list[elev].isEmpty() ) {
 
-        if (!list[elev].isEmpty() ) {//&&list[elev].get(0).getState()==LEVEL ) {
+                int state = list[elev].get(0).getState(); //INIT=0, GOING2SRC=1, GOIND2DEST=2, DONE=3;
 
-            int state = list[elev].get(0).getState(); //INIT=0, GOING2SRC=1, GOIND2DEST=2, DONE=3;
+                if (list[elev].size() > 1 && list[elev].get(0).getTime(GOING2SRC) > list[elev].get(1).getTime(GOING2SRC)) {
+                    OnTheWay(elev,curr);
+                }
 
-            if (list[elev].size() > 1 && list[elev].get(0).getTime(GOING2SRC) > list[elev].get(1).getTime(GOING2SRC)) {
-                OnTheWay(elev,curr);
+                if (state == GOING2SRC && curr.getPos() != list[elev].get(0).getSrc()) {//the state is going to src:
+                    int k = list[elev].get(0).getSrc();
+                    curr.goTo(k);
+                } else {
+                    int k = list[elev].get(0).getDest();
+                    curr.goTo(k);
+                }
             }
 
-            if (state == GOING2SRC && curr.getPos() != list[elev].get(0).getSrc()) {//the state is going to src:
-                int k = list[elev].get(0).getSrc();
-                curr.goTo(k);
-            } else {
-                          /*  if (list[elev].size() >= 2) {
-                                OnTheWay(elev, curr);
-                            }*/
-                int k = list[elev].get(0).getDest();
-                curr.goTo(k);
             }
-        }
 
-    }
-
-    private void OnTheWay(int elev,Elevator curr){
-        CallForElevator A = list[elev].get(0);
-        CallForElevator B = list[elev].get(1);
-        if (curr.getState() == UP) {
-            if (A.getState() == GOING2SRC && B.getState() == GOING2SRC) {
-                curr.goTo(Integer.min(A.getSrc(), B.getSrc()));
-            }
-            if (A.getState() == GOIND2DEST && B.getState() == GOING2SRC) {
-                curr.goTo(Integer.min(A.getDest(), B.getSrc()));
-            }
-            if (A.getState() == GOING2SRC && B.getState() == GOIND2DEST) {
-                curr.goTo(Integer.min(A.getSrc(), B.getDest()));
-            }
-            if (A.getState() == GOIND2DEST && B.getState() == GOIND2DEST) {
-                curr.goTo(Integer.min(A.getDest(), B.getDest()));
-            }
-        }
-        if (curr.getState() == DOWN) {
-            if (A.getState() == GOING2SRC && B.getState() == GOING2SRC) {
-                curr.goTo(Integer.max(A.getSrc(), B.getSrc()));
-            }
-            if (A.getState() == GOIND2DEST && B.getState() == GOING2SRC) {
-                curr.goTo(Integer.max(A.getDest(), B.getSrc()));
-            }
-            if (A.getState() == GOING2SRC && B.getState() == GOIND2DEST) {
-                curr.goTo(Integer.max(A.getSrc(), B.getDest()));
-            }
-            if (A.getState() == GOIND2DEST && B.getState() == GOIND2DEST) {
-                curr.goTo(Integer.max(A.getDest(), B.getDest()));
-            }
-        }
-    }
+    /**
+     * This method peek calls that occur between the current pos of the elev and dest of the first call in the list
+     * @param elev  the current Elevator index on which the operation is performs.
+     * @param curr the object itself
+     */
+         private void OnTheWay(int elev,Elevator curr){
+             CallForElevator A = list[elev].get(0);
+             CallForElevator B = list[elev].get(1);
+             if (curr.getState() == UP) {
+                 if (A.getState() == GOING2SRC && B.getState() == GOING2SRC) {
+                     curr.goTo(Integer.min(A.getSrc(), B.getSrc()));
+                 }
+                 if (A.getState() == GOIND2DEST && B.getState() == GOING2SRC) {
+                     curr.goTo(Integer.min(A.getDest(), B.getSrc()));
+                 }
+                 if (A.getState() == GOING2SRC && B.getState() == GOIND2DEST) {
+                     curr.goTo(Integer.min(A.getSrc(), B.getDest()));
+                 }
+                 if (A.getState() == GOIND2DEST && B.getState() == GOIND2DEST) {
+                     curr.goTo(Integer.min(A.getDest(), B.getDest()));
+                 }
+             }
+             if (curr.getState() == DOWN) {
+                 if (A.getState() == GOING2SRC && B.getState() == GOING2SRC) {
+                     curr.goTo(Integer.max(A.getSrc(), B.getSrc()));
+                 }
+                 if (A.getState() == GOIND2DEST && B.getState() == GOING2SRC) {
+                     curr.goTo(Integer.max(A.getDest(), B.getSrc()));
+                 }
+                 if (A.getState() == GOING2SRC && B.getState() == GOIND2DEST) {
+                     curr.goTo(Integer.max(A.getSrc(), B.getDest()));
+                 }
+                 if (A.getState() == GOIND2DEST && B.getState() == GOIND2DEST) {
+                     curr.goTo(Integer.max(A.getDest(), B.getDest()));
+                 }
+             }
+         }
 
 
 
@@ -278,25 +306,30 @@ public class MyElev implements ElevatorAlgo {
      * @return
      */
 
-    private static int rand ( int min, int max){
-        if (max < min) {
-            throw new RuntimeException("ERR: wrong values for range max should be >= min");
-        }
-        int ans = min;
-        double dx = max - min;
-        double r = Math.random() * dx;
-        ans = ans + (int) (r);
-        return ans;
-    }
-
-    private void removeDone(ArrayList<CallForElevator> l){
-        for(int i=0;i<l.size();i++){
-            if(l.get(0).getState()==DONE){
-                l.remove(i);
+        private static int rand ( int min, int max){
+            if (max < min) {
+                throw new RuntimeException("ERR: wrong values for range max should be >= min");
             }
+            int ans = min;
+            double dx = max - min;
+            double r = Math.random() * dx;
+            ans = ans + (int) (r);
+            return ans;
         }
 
+    /**
+     * remove the "Done" calls from the list
+     * @param l
+     */
+        private void removeDone(ArrayList<CallForElevator> l){
+           for(int i=0;i<l.size();i++){
+                if(l.get(0).getState()==DONE){
+                    l.remove(i);
+                }
+            }
+
+        }
+
+
+
     }
-
-
-}////
