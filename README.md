@@ -1,6 +1,6 @@
 # Elevator-Algo (Java)
 This repository is a smart elevator online algoritm.  
-I programmed this with a partner as an assignment in Ariel University as part of my OOP course.  
+I programmed this with a partner as a first assignment in Ariel University as part of my OOP course.  
 This was the first assignment.  
 The goal of this algorithm is to make a smart elevator that minimize the waiting time for each person and minimize the average waiting time for everyone.  
 The most importent class of this program is the MyElev class which contains the algorithm itself.  
